@@ -1,35 +1,42 @@
+import os
 import streamlit as st
-from langchain.prompts import PromptTemplate
-from langchain.memory import ConversationBufferMemory
-from langchain_community.chains import RunnableSequence
-from config import ollama_llm
-from apscheduler.schedulers.background import BackgroundScheduler
-import time
-import threading
+from dotenv import load_dotenv
+from langchain.prompts import ChatPromptTemplate
+from langchain_community.llms import Ollama
 
-# Define the prompt template for health tips
-health_tip_prompt = PromptTemplate(
-    input_variables=["input", "history"],
-    template=""" 
-You are a Daily Health Tips and Reminders Chatbot. 
-Your role is to provide personalized health tips, reminders, and motivation for users to maintain a healthy lifestyle. 
-Given the conversation history below and user input, provide a helpful response.
+# Load the Langsmith API key from the .env file
+load_dotenv()
+api_key = os.getenv("LANGSMITH_API_KEY")
 
-History:
-{history}
+if api_key is None:
+    st.write("API key is missing! Please check your .env file.")
+else:
+    os.environ["LANGSMITH_API_KEY"] = api_key  # Pass to environment if needed
 
-User input: {input}
+    # Define the prompt template for health tips and reminders
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", "You are a helpful assistant who provides daily health tips and reminders."),
+            ("user", "Give me a health tip or reminder for today: {question}")
+        ]
+    )
 
-Response:
-"""
-)
+    # Initialize your model (replace Ollama with a Langsmith API model if needed)
+    llm = Ollama(model="llama2")  # Use an open-source model
 
-# Initialize conversation memory
-memory = ConversationBufferMemory(memory_key="history", input_key="input")
+    # Chain the prompt with the model
+    chain = prompt | llm
 
-# Create the RunnableSequence, which is the updated approach
-runnable_sequence = health_tip_prompt | ollama_llm
+    # Streamlit Framework
+    st.title('Daily Health Tips and Reminders')
+    input_text = st.text_input("Ask for a health tip or reminder:")
 
-# Function to handle user queries
-def get_health_tip_response(user_input):
-    response = runnable_sequence.invoke({"input": user_input, "history": memory.load_memory_variables({})})
+    if input_text:
+        # Get a health tip or reminder based on the user's request
+        response = chain.invoke({'question': input_text})
+        if response:
+            st.write(f"Health Tip/Reminder: {response}")
+        else:
+            st.write("Sorry, I couldn't generate a response.")
+    else:
+        st.write("Please enter a question to get your health tip or reminder.")
