@@ -32,4 +32,4 @@ runnable_sequence = health_tip_prompt | ollama_llm
 
 # Function to handle user queries
 def get_health_tip_response(user_input):
-    response = runnable_sequence.invoke({"input": user_input, "history": memory.load_memory_variables({})
+    response = runnable_sequence.invoke({"input": user_input, "history": memory.load_memory_variables({})})
